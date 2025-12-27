@@ -4,13 +4,20 @@ from datetime import timedelta, date, datetime
 import calendar
 import io
 
+# [추가] 드래그 앤 드롭 기능을 위한 라이브러리 임포트
+try:
+    from streamlit_sortables import sort_items
+except ImportError:
+    st.error("드래그 기능을 사용하려면 라이브러리 설치가 필요합니다. 터미널에 `pip install streamlit-sortables`를 입력해주세요.")
+    def sort_items(items, key=None): return items
+
 # --- Page Basic Settings ---
 st.set_page_config(layout="wide", page_title="호텔 상품 관리 시스템 Final")
 
 # --- Custom Styles (Orange Theme + Button Styles) ---
 st.markdown("""
     <style>
-    /* 1. Secondary Button (General) */
+    /* 1. General Button (Secondary) */
     .stButton>button[kind="secondary"] {
         color: #e65100 !important; 
         border-color: #ffcc80 !important; 
@@ -162,6 +169,7 @@ def generate_dates(start_date, end_date, weekdays):
     dates = []
     current_date = start_date
     while current_date <= end_date:
+        # python weekday: 0=Mon, 6=Sun
         if current_date.weekday() in weekdays:
             dates.append(current_date)
         current_date += timedelta(days=1)
@@ -366,7 +374,6 @@ if current_hotel:
                     st.markdown("---")
                     st.markdown("##### ✅ 적용 대상 날짜 (삭제하려면 x 클릭)")
                     
-                    # Multiselect를 사용하여 태그 형태로 보여주고 삭제 가능하게 함
                     updated_dates = st.multiselect(
                         "최종 선택된 날짜들",
                         options=st.session_state.selected_dates_buffer,
@@ -375,7 +382,6 @@ if current_hotel:
                         label_visibility="collapsed"
                     )
                     
-                    # 사용자가 삭제했을 경우 Session State 업데이트
                     if len(updated_dates) != len(st.session_state.selected_dates_buffer):
                         st.session_state.selected_dates_buffer = updated_dates
                         st.rerun()
@@ -390,6 +396,7 @@ if current_hotel:
                 for p in sel_work_prods:
                     st.markdown(f"**🔹 {p}**") 
                     pc1, pc2, pc3 = st.columns(3)
+                    # [수정] 데이터 생성 후 입력창이 비워지도록 value=None 고정 (key 변경으로 초기화 효과)
                     pr = pc1.number_input(f"요금 (원)", key=f"p_{p}", value=None, step=1000, placeholder="숫자 입력")
                     stk = pc2.number_input(f"재고 (개)", key=f"s_{p}", value=5)
                     sts = pc3.selectbox(f"상태", ["Y", "N"], key=f"st_{p}")
@@ -413,8 +420,6 @@ if current_hotel:
                             st.error("🚨 모든 상품의 요금을 입력해주세요.")
                         else:
                             # 실제 데이터 생성 로직
-                            # selected_dates_buffer에 있는 문자열 날짜들을 다시 date 객체로 변환 필요
-                            # format_date_kr 형식: "YYYY-MM-DD (요일)" -> 앞 10자리만 자르면 됨
                             final_dates_obj = []
                             for d_str in st.session_state.selected_dates_buffer:
                                 d_only = d_str.split(" ")[0]
@@ -433,7 +438,7 @@ if current_hotel:
                             st.session_state.main_df.drop_duplicates(subset=['날짜', '숙소명', '상품명'], keep='last', inplace=True)
                             st.session_state.main_df.sort_values(['날짜', '상품명'], inplace=True)
                             
-                            # 성공 후 초기화
+                            # 성공 후 초기화 (선택된 날짜 버퍼 비우기)
                             st.session_state.selected_dates_buffer = []
                             st.success(f"✅ {len(new_rows)}건의 데이터가 성공적으로 생성되었습니다!")
                             st.rerun()
@@ -498,8 +503,12 @@ if current_hotel:
             mask = (hotel_df['날짜'].dt.year == curr_y) & (hotel_df['날짜'].dt.month == curr_m)
             month_data = hotel_df[mask].copy()
             
+            # [수정] 캘린더 시작 요일을 일요일로 설정
+            calendar.setfirstweekday(calendar.SUNDAY)
             cal = calendar.monthcalendar(curr_y, curr_m)
-            html_cal = "<table class='calendar-table'><thead><tr>" + "".join([f"<th>{d}</th>" for d in ["월", "화", "수", "목", "금", "토", "일"]]) + "</tr></thead><tbody>"
+            
+            # 헤더도 일~토 순서로 변경
+            html_cal = "<table class='calendar-table'><thead><tr>" + "".join([f"<th>{d}</th>" for d in ["일", "월", "화", "수", "목", "금", "토"]]) + "</tr></thead><tbody>"
             for week in cal:
                 html_cal += "<tr>"
                 for day in week:
