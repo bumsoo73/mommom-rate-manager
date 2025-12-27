@@ -37,31 +37,27 @@ st.markdown("""
         border-color: #e65100 !important;
     }
 
-    /* Custom Red Button for Period Add (Emphasis) */
-    .period-add-btn button {
-        background-color: #d32f2f !important; /* Red */
-        border-color: #d32f2f !important;
-        color: white !important;
-        width: 100%; 
-        font-size: 0.9em !important;
-        padding: 0.25rem 0.5rem !important;
-    }
-    .period-add-btn button:hover {
-        background-color: #b71c1c !important; /* Darker Red */
-        border-color: #b71c1c !important;
-    }
-
-    /* Custom Black Button for Delete */
+    /* Custom Black Button for Period Add (Hover 유지) */
     .black-btn > button {
         background-color: #212121 !important;
         border-color: #212121 !important;
         color: white !important;
-        width: 100%;
+        width: 280px !important;
+        margin-top: 5px;
     }
     .black-btn > button:hover {
-        background-color: #000000 !important;
+        background-color: #000000 !important; 
         border-color: #000000 !important;
         color: white !important;
+    }
+    .black-btn > button:active {
+        background-color: #000000 !important;
+        color: white !important;
+    }
+    .black-btn > button:focus {
+        background-color: #212121 !important;
+        color: white !important;
+        box-shadow: none !important;
     }
 
     /* Calendar & Table */
@@ -115,7 +111,7 @@ st.markdown("""
     .selected-date-box {
         background-color: #fff3e0; padding: 10px; border-radius: 5px;
         border: 1px solid #ffe0b2; color: #e65100; font-weight: bold;
-        text-align: center; margin-bottom: 10px;
+        text-align: center; margin-bottom: 5px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -304,8 +300,6 @@ with st.sidebar:
     
     current_hotel = None
     if filtered_hotels:
-        # [요청] 초기 선택 없음 (index=None은 selectbox에서 지원 안함, placeholder로 우회하거나 비워둠)
-        # Streamlit selectbox default is 0. To make it empty, we can add a placeholder option.
         hotel_options = ["(숙소를 선택하세요)"] + filtered_hotels
         selected_option = st.selectbox("숙소 선택", hotel_options)
         
@@ -420,14 +414,13 @@ if current_hotel:
                     if len(dr)==2: 
                         st.markdown(f"<div class='selected-date-box'>선택된 기간: {format_date_kr(dr[0])} ~ {format_date_kr(dr[1])}</div>", unsafe_allow_html=True)
                         
-                        # [요청] 기간 추가 버튼: 작고 빨간색, 선택된 기간 바로 밑에 위치
-                        st.markdown('<div class="period-add-btn">', unsafe_allow_html=True)
-                        if st.button("   ⬇️ 기간 추가 (필수) ⬇️  ", key="add_pd_btn"):
-                            if len(dr)==2: # 요일 체크는 나중에 해도 됨, 일단 기간이 있으면
-                                # 요일 가져오기
+                        # [요청] 기간 추가 버튼: 검정색 + 너비 조정
+                        st.markdown('<div class="black-btn">', unsafe_allow_html=True)
+                        if st.button("⬇️ 기간 추가 (필수) ⬇️", key="add_pd_btn"):
+                            if len(dr)==2: # 요일 체크는 나중에 해도 됨
                                 sel_ds = []
                                 for i in range(7):
-                                    if st.session_state.get(f"wd_{i}", True): # Default True if not set
+                                    if st.session_state.get(f"wd_{i}", True):
                                         p_day = 6 if i==0 else i-1
                                         sel_ds.append(p_day)
                                 
@@ -552,23 +545,35 @@ if current_hotel:
                 cols = ['날짜', '상품명', '상품관리코드', '요금', '재고', '판매상태']
                 list_view_df = list_view_df[cols]
 
-                # [요청] 요금 콤마 포맷, 날짜(요일) 영어 (ddd) -> YYYY-MM-DD (Mon)
-                edited = st.data_editor(
-                    list_view_df,
-                    column_config={
-                        "날짜": st.column_config.DateColumn(format="YYYY-MM-DD (ddd)"), 
-                        "상품명": st.column_config.TextColumn(disabled=True),
-                        "상품관리코드": st.column_config.TextColumn(disabled=True),
-                        "요금": st.column_config.NumberColumn(format="%d"), 
-                    },
-                    use_container_width=True, hide_index=True
-                )
+                # [요청] 일괄 수정 모드 (Form) 적용
+                st.info("💡 팁: 아래 리스트에서 여러 칸을 자유롭게 수정한 뒤, 맨 아래 **[수정사항 한 번에 저장하기]** 버튼을 눌러주세요.")
                 
-                original_cols = ['날짜', '상품명', '요금', '재고', '판매상태']
-                if not edited[original_cols].equals(show_df[original_cols]):
-                    st.session_state.main_df.loc[edited.index, ['날짜','요금','재고','판매상태']] = edited[['날짜','요금','재고','판매상태']]
-                    save_hotel_data(current_hotel, st.session_state.main_df)
-                    st.toast("수정됨")
+                with st.form("list_edit_form"):
+                    edited = st.data_editor(
+                        list_view_df,
+                        column_config={
+                            "날짜": st.column_config.DateColumn(format="YYYY-MM-DD (ddd)"), 
+                            "상품명": st.column_config.TextColumn(disabled=True),
+                            "상품관리코드": st.column_config.TextColumn(disabled=True),
+                            "요금": st.column_config.NumberColumn(format="%d"), 
+                        },
+                        use_container_width=True, hide_index=True
+                    )
+                    submit_changes = st.form_submit_button("✅ 수정사항 한 번에 저장하기 (클릭)", type="primary")
+                
+                if submit_changes:
+                    # 변경 감지 및 저장
+                    original_cols = ['날짜', '상품명', '요금', '재고', '판매상태']
+                    # Compare essential columns
+                    if not edited[original_cols].equals(show_df[original_cols]):
+                        st.session_state.main_df.loc[edited.index, ['날짜','요금','재고','판매상태']] = edited[['날짜','요금','재고','판매상태']]
+                        save_hotel_data(current_hotel, st.session_state.main_df)
+                        st.success("✅ 모든 수정사항이 저장되었습니다!")
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.info("변경 사항이 없습니다.")
+
         else:
             is_stk = "재고" in view
             c1, c2, c3, c4, c5 = st.columns([6, 1, 2, 1, 6])
@@ -588,7 +593,6 @@ if current_hotel:
             calendar.setfirstweekday(calendar.SUNDAY)
             cal = calendar.monthcalendar(y, m)
             
-            # [요청] 금(Fri)=파랑, 토(Sat)=빨강 헤더 클래스 적용
             days_header = ["일", "월", "화", "수", "목", "금", "토"]
             th_html = ""
             for i, d_name in enumerate(days_header):
@@ -618,7 +622,6 @@ if current_hotel:
                             is_stop = (r['판매상태'] == 'N')
                             is_soldout = (q == 0)
                             
-                            # [요청] 배경색 로직: 재고 0(옅은 빨강), N(회색)
                             box_cls = "prod-item"
                             if is_soldout: box_cls = "bg-soldout"
                             elif is_stop: box_cls = "bg-stop"
@@ -647,13 +650,12 @@ if current_hotel:
             
             out_rows = []
             for _, r in show_df.iterrows():
-                # [요청] 엑셀 J열 매핑
                 row = [""]*13
                 row[0] = format_date_kr(r['날짜'])
                 row[1] = r['상품명']
                 row[6] = r['요금']
                 row[8] = r['재고']
-                row[9] = code_map.get(r['상품명'], '') # J열에 상품코드
+                row[9] = code_map.get(r['상품명'], '') # J열
                 row[12] = r['판매상태']
                 out_rows.append(row)
             
