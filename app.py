@@ -4,20 +4,13 @@ from datetime import timedelta, date, datetime
 import calendar
 import io
 
-# [추가] 드래그 앤 드롭 기능을 위한 라이브러리 임포트
-try:
-    from streamlit_sortables import sort_items
-except ImportError:
-    st.error("드래그 기능을 사용하려면 라이브러리 설치가 필요합니다. 터미널에 `pip install streamlit-sortables`를 입력해주세요.")
-    def sort_items(items, key=None): return items
-
-# --- 페이지 기본 설정 ---
+# --- Page Basic Settings ---
 st.set_page_config(layout="wide", page_title="호텔 상품 관리 시스템 Final")
 
-# --- 스타일 커스텀 (강력한 주황색 테마 적용) ---
+# --- Custom Styles (Orange Theme + Button Styles) ---
 st.markdown("""
     <style>
-    /* 1. 일반 버튼 (Secondary) */
+    /* 1. General Button (Secondary) */
     .stButton>button[kind="secondary"] {
         color: #e65100 !important; 
         border-color: #ffcc80 !important; 
@@ -29,7 +22,7 @@ st.markdown("""
         background-color: #fff3e0 !important;
     }
 
-    /* 2. 주요 버튼 (Primary) */
+    /* 2. Primary Button */
     .stButton>button[kind="primary"] {
         background-color: #ef6c00 !important; 
         border-color: #ef6c00 !important;
@@ -45,13 +38,13 @@ st.markdown("""
         box-shadow: none !important;
     }
 
-    /* 3. 탭 메뉴 선택 색상 */
+    /* 3. Tab Menu Selection Color */
     .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {
         border-top-color: #ef6c00 !important;
         color: #ef6c00 !important;
     }
 
-    /* 4. 캘린더 스타일 */
+    /* 4. Calendar Style */
     .calendar-table {
         width: 100%;
         border-collapse: collapse;
@@ -86,13 +79,13 @@ st.markdown("""
         border: 1px solid #ffe0b2;
     }
     
-    /* 가격 태그 (주황색) */
+    /* Price Tag (Orange) */
     .price-tag {
         font-weight: bold;
         color: #ef6c00;
     }
     
-    /* 재고 태그 (기본: 파란색) */
+    /* Stock Tag (Default: Blue) */
     .stock-tag {
         font-weight: bold;
         color: #1565c0;
@@ -102,7 +95,7 @@ st.markdown("""
         font-size: 0.9em;
     }
 
-    /* 재고 0 (품절) 태그 - 빨간색 강조 */
+    /* Stock 0 (Out of Stock) Tag - Red Emphasis */
     .stock-zero {
         font-weight: bold;
         color: #b71c1c; 
@@ -117,10 +110,17 @@ st.markdown("""
         background-color: #f9f9f9;
         color: #ccc;
     }
+
+    /* [Fix] Remove border for small icon buttons */
+    div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
+        border: none !important;
+        padding: 0px 5px !important;
+        background: transparent !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 데이터 저장소 (Session State) ---
+# --- Data Storage (Session State) ---
 if 'hotels' not in st.session_state:
     st.session_state.hotels = ["쏠비치 삼척", "소노벨 천안"]
 if 'products' not in st.session_state:
@@ -131,30 +131,32 @@ if 'products' not in st.session_state:
 if 'main_df' not in st.session_state:
     st.session_state.main_df = pd.DataFrame(columns=['날짜', '숙소명', '상품명', '요금', '재고', '판매상태'])
 
-# 캘린더 보기용 현재 월 상태
+# Calendar view current month
 if 'cal_year' not in st.session_state:
     st.session_state.cal_year = date.today().year
 if 'cal_month' not in st.session_state:
     st.session_state.cal_month = date.today().month
 
-# 삭제 확인용
+# For deletion confirmation
 if 'confirm_delete' not in st.session_state:
     st.session_state.confirm_delete = False
 if 'hotel_to_delete' not in st.session_state:
     st.session_state.hotel_to_delete = None
 
-# --- 편의 함수 ---
+# --- Helper Functions ---
 def format_date_kr(d):
-    """YYYY-MM-DD (요일) 형식으로 변환"""
-    # 안전하게 datetime.date 객체로 변환
+    """YYYY-MM-DD (Day) format"""
     if isinstance(d, str):
         d = pd.to_datetime(d).date()
     elif isinstance(d, datetime):
         d = d.date()
         
     weekdays = ["월", "화", "수", "목", "금", "토", "일"]
-    # [수정] 포맷 변경: YYYY/MM/DD -> YYYY-MM-DD
     return f"{d.year}-{d.month:02d}-{d.day:02d} ({weekdays[d.weekday()]})"
+
+def get_day_name(d):
+    weekdays = ["월", "화", "수", "목", "금", "토", "일"]
+    return weekdays[d.weekday()]
 
 def generate_dates(start_date, end_date, weekdays):
     dates = []
@@ -175,8 +177,32 @@ def change_month(amount):
         st.session_state.cal_month = 12
         st.session_state.cal_year -= 1
 
+# Product Order Change Logic
+def move_product(current_hotel, index, direction):
+    """
+    direction: -1 (up), 1 (down)
+    """
+    all_products = st.session_state.products
+    current_hotel_prods = [p for p in all_products if p['hotel'] == current_hotel]
+    other_prods = [p for p in all_products if p['hotel'] != current_hotel]
+    
+    if direction == -1 and index > 0:
+        current_hotel_prods[index], current_hotel_prods[index-1] = current_hotel_prods[index-1], current_hotel_prods[index]
+    elif direction == 1 and index < len(current_hotel_prods) - 1:
+        current_hotel_prods[index], current_hotel_prods[index+1] = current_hotel_prods[index+1], current_hotel_prods[index]
+    
+    st.session_state.products = other_prods + current_hotel_prods
+
+def delete_product(current_hotel, index):
+    all_products = st.session_state.products
+    current_hotel_prods = [p for p in all_products if p['hotel'] == current_hotel]
+    other_prods = [p for p in all_products if p['hotel'] != current_hotel]
+    del current_hotel_prods[index]
+    st.session_state.products = other_prods + current_hotel_prods
+
+
 # ==========================================
-# 1. 사이드바: 숙소 선택 및 관리
+# 1. Sidebar: Accommodation Selection
 # ==========================================
 with st.sidebar:
     st.title("🏢 숙소 선택")
@@ -233,7 +259,7 @@ with st.sidebar:
                         st.rerun()
 
 # ==========================================
-# 2. 메인 작업 영역
+# 2. Main Work Area
 # ==========================================
 if current_hotel:
     st.header(f"🏨 {current_hotel} 관리")
@@ -241,11 +267,13 @@ if current_hotel:
     tab_prod, tab_work, tab_excel = st.tabs(["1. 📦 상품 세팅", "2. 📅 가격/재고 등록 & 확인", "3. 📤 엑셀 추출"])
 
     # ---------------------------------------------------
-    # TAB 1: 상품 세팅
+    # TAB 1: Product Setting (Arrow Buttons)
     # ---------------------------------------------------
     with tab_prod:
-        c1, c2 = st.columns([1, 2])
-        with c1:
+        c_left, c_right = st.columns([1, 1.5], gap="large")
+        
+        # [Left] Product Registration
+        with c_left:
             st.subheader("상품 등록")
             with st.form("add_product_form", clear_on_submit=True):
                 new_prod_name = st.text_input("상품명 (객실타입) 입력")
@@ -253,34 +281,55 @@ if current_hotel:
                     my_prods = [p['name'] for p in st.session_state.products if p['hotel'] == current_hotel]
                     if new_prod_name and new_prod_name not in my_prods:
                         st.session_state.products.append({'hotel': current_hotel, 'name': new_prod_name})
-                        st.success(f"'{new_prod_name}' 추가 완료")
+                        st.success(f"✅ '{new_prod_name}' 추가됨")
                         st.rerun()
                     elif new_prod_name in my_prods:
                         st.warning("이미 등록된 상품명입니다.")
-        with c2:
-            st.subheader("등록된 상품 리스트 (순서 변경 가능)")
-            st.caption("💡 리스트를 드래그하여 위아래로 순서를 바꿀 수 있습니다.")
-            current_products_objs = [p for p in st.session_state.products if p['hotel'] == current_hotel]
-            current_names = [p['name'] for p in current_products_objs]
-            if current_names:
-                sorted_names = sort_items(current_names)
-                if sorted_names != current_names:
-                    other_hotel_products = [p for p in st.session_state.products if p['hotel'] != current_hotel]
-                    new_ordered_products = [{'hotel': current_hotel, 'name': name} for name in sorted_names]
-                    st.session_state.products = other_hotel_products + new_ordered_products
-                    st.rerun() 
-                st.markdown("###### 📋 확정된 순서")
-                df_show = pd.DataFrame(sorted_names, columns=["상품명"])
-                df_show.index = df_show.index + 1  
-                st.table(df_show)
+
+        # [Right] Product List (Order Change)
+        with c_right:
+            st.subheader("등록된 상품 순서 관리")
+            st.info("⬆️ ⬇️ 버튼을 눌러 순서를 변경하세요.")
+            
+            current_prods_list = [p for p in st.session_state.products if p['hotel'] == current_hotel]
+            
+            if current_prods_list:
+                for i, prod in enumerate(current_prods_list):
+                    # Layout: [Up] [Down] [Product Name] [Delete]
+                    # Adjusted ratio for buttons to be on the left
+                    c1, c2, c3, c4 = st.columns([0.5, 0.5, 4, 0.5])
+                    
+                    with c1:
+                        if i > 0:
+                            if st.button("⬆️", key=f"up_{i}"):
+                                move_product(current_hotel, i, -1)
+                                st.rerun()
+                        else: st.write("") 
+
+                    with c2:
+                        if i < len(current_prods_list) - 1:
+                            if st.button("⬇️", key=f"down_{i}"):
+                                move_product(current_hotel, i, 1)
+                                st.rerun()
+                        else: st.write("")
+
+                    with c3:
+                        st.markdown(f"<div style='padding-top: 5px;'><b>{prod['name']}</b></div>", unsafe_allow_html=True)
+
+                    with c4:
+                        if st.button("🗑️", key=f"del_{i}"):
+                            delete_product(current_hotel, i)
+                            st.rerun()
+                    
+                    st.divider()
             else:
-                st.info("등록된 상품이 없습니다. 왼쪽에서 상품을 추가해주세요.")
+                st.info("등록된 상품이 없습니다.")
 
     # ---------------------------------------------------
-    # TAB 2: 가격/재고 등록 및 뷰어
+    # TAB 2: Rate/Stock Registration & Viewer
     # ---------------------------------------------------
     with tab_work:
-        # [일괄 입력 패널]
+        # [Bulk Input]
         with st.expander("⚡️ 가격/재고 일괄 입력 열기 (클릭)", expanded=True):
             my_products = [p['name'] for p in st.session_state.products if p['hotel'] == current_hotel]
             if not my_products:
@@ -288,15 +337,30 @@ if current_hotel:
             else:
                 st.markdown("#### 1. 기간 및 요일")
                 c_d1, c_d2 = st.columns([1, 2])
-                with c_d1: d_range = st.date_input("기간", [])
+                with c_d1: 
+                    d_range = st.date_input("기간", [])
+                    if len(d_range) == 2:
+                        start_d_str = format_date_kr(d_range[0])
+                        end_d_str = format_date_kr(d_range[1])
+                        st.caption(f"선택된 기간: {start_d_str} ~ {end_d_str}")
+
                 with c_d2:
                     st.markdown("요일 선택")
+                    # Fix: Bring check boxes closer by using many columns with empty ones
+                    # Display Labels: 일 월 화 수 목 금 토
+                    # Python Weekday: 6  0  1  2  3  4  5
                     ui_labels = ["일", "월", "화", "수", "목", "금", "토"]
                     py_weekdays = [6, 0, 1, 2, 3, 4, 5]
+                    
                     sel_days = []
-                    day_cols = st.columns(7) 
+                    
+                    # Using 14 columns to create tighter spacing visually or just 7 standard
+                    # Standard columns(7) usually spreads them out.
+                    # We can use a single row container
+                    
+                    cols = st.columns(7)
                     for i, label in enumerate(ui_labels):
-                        if day_cols[i].checkbox(label, value=True, key=f"day_chk_{i}"):
+                        if cols[i].checkbox(label, value=True, key=f"day_chk_{i}"):
                             sel_days.append(py_weekdays[i])
                 
                 st.markdown("#### 2. 상품별 설정")
@@ -344,11 +408,17 @@ if current_hotel:
                                 st.success(f"{len(new_rows)}건 생성 완료!")
                                 st.rerun()
 
-        # [데이터 확인 및 수정 영역]
         st.divider()
         st.markdown("### 📊 데이터 확인 및 수정")
         
+        # Sort data by current product order
+        current_prods_order = [p['name'] for p in st.session_state.products if p['hotel'] == current_hotel]
+        
         hotel_df = st.session_state.main_df[st.session_state.main_df['숙소명'] == current_hotel].copy()
+        
+        if not hotel_df.empty and current_prods_order:
+            hotel_df['상품명'] = pd.Categorical(hotel_df['상품명'], categories=current_prods_order, ordered=True)
+            hotel_df = hotel_df.sort_values(['날짜', '상품명'])
         
         view_type = st.radio(
             "보기 방식", 
@@ -356,11 +426,9 @@ if current_hotel:
             horizontal=True
         )
         
-        # 1) 리스트 표 보기 (직접 수정)
+        # 1) List View
         if view_type == "📋 리스트 표보기 (직접 수정 가능)":
             if not hotel_df.empty:
-                # [수정] 날짜 포맷 변경 (YYYY-MM-DD)
-                # 에디터 특성상 YYYY-MM-DD 형식을 써야 달력 기능을 유지할 수 있습니다.
                 column_config = {
                     "날짜": st.column_config.DateColumn("날짜", format="YYYY-MM-DD"),
                     "상품명": st.column_config.TextColumn("상품명", disabled=True),
@@ -372,7 +440,6 @@ if current_hotel:
                 if not hotel_df.empty:
                     hotel_df['요금'] = pd.to_numeric(hotel_df['요금'], errors='coerce').fillna(0).astype(int)
 
-                # 에디터 표시
                 edited_df = st.data_editor(
                     hotel_df[['날짜', '상품명', '요금', '재고', '판매상태']], 
                     column_config=column_config,
@@ -380,35 +447,31 @@ if current_hotel:
                     hide_index=True,
                     key="list_editor"
                 )
-                # 수정 저장
                 if not edited_df.equals(hotel_df[['날짜', '상품명', '요금', '재고', '판매상태']]):
                     st.session_state.main_df.loc[edited_df.index, ['날짜', '요금', '재고', '판매상태']] = edited_df[['날짜', '요금', '재고', '판매상태']]
                     st.toast("✅ 수정사항이 저장되었습니다!")
             else:
                 st.info("데이터가 없습니다. 위에서 데이터를 생성해주세요.")
                 
-        # 2) 캘린더 보기 (요금 or 재고)
+        # 2) Calendar View
         else:
             is_stock_view = "재고" in view_type
             
-            # [상단] 월 이동 & 타이틀
             _, c_prev, c_title, c_next, _ = st.columns([5, 0.5, 2, 0.5, 5])
             
             with c_prev:
                 if st.button("⬅️"): change_month(-1); st.rerun()
             with c_next:
-                if st.button("➡️>"): change_month(1); st.rerun()
+                if st.button("➡️"): change_month(1); st.rerun()
             with c_title:
                 curr_y = st.session_state.cal_year
                 curr_m = st.session_state.cal_month
                 st.markdown(f"<h3 style='text-align: center; color: #e65100; margin-top: -5px; white-space: nowrap;'>{curr_y}년 {curr_m}월</h3>", unsafe_allow_html=True)
             
-            # 데이터 필터링
             hotel_df['날짜'] = pd.to_datetime(hotel_df['날짜'])
             mask = (hotel_df['날짜'].dt.year == curr_y) & (hotel_df['날짜'].dt.month == curr_m)
             month_data = hotel_df[mask].copy()
             
-            # [A] 비주얼 캘린더 (HTML)
             cal = calendar.monthcalendar(curr_y, curr_m)
             html_cal = "<table class='calendar-table'><thead><tr>" + "".join([f"<th>{d}</th>" for d in ["월", "화", "수", "목", "금", "토", "일"]]) + "</tr></thead><tbody>"
             for week in cal:
@@ -418,6 +481,12 @@ if current_hotel:
                     else:
                         d_obj = date(curr_y, curr_m, day)
                         day_records = month_data[month_data['날짜'].dt.date == d_obj]
+                        
+                        # Apply product sorting
+                        if not day_records.empty and current_prods_order:
+                            day_records['상품명'] = pd.Categorical(day_records['상품명'], categories=current_prods_order, ordered=True)
+                            day_records = day_records.sort_values('상품명')
+
                         cell_content = f"<span class='day-number'>{day}</span>"
                         for _, row in day_records.iterrows():
                             p_name = row['상품명']
@@ -436,23 +505,26 @@ if current_hotel:
             st.markdown(html_cal, unsafe_allow_html=True)
 
     # ---------------------------------------------------
-    # TAB 3: 엑셀 추출
+    # TAB 3: Excel Export
     # ---------------------------------------------------
     with tab_excel:
         st.subheader("업로드용 엑셀 다운로드")
         
         hotel_df = st.session_state.main_df[st.session_state.main_df['숙소명'] == current_hotel].copy()
         
+        # Apply sorting
+        if not hotel_df.empty and current_prods_order:
+            hotel_df['상품명'] = pd.Categorical(hotel_df['상품명'], categories=current_prods_order, ordered=True)
+            hotel_df = hotel_df.sort_values(['날짜', '상품명'])
+        
         if hotel_df.empty:
             st.warning("⚠️ 엑셀로 추출할 데이터가 없습니다. 먼저 '상품 세팅' 및 '가격/재고 등록'을 진행해주세요.")
         else:
             st.success(f"총 {len(hotel_df)}개의 데이터가 준비되었습니다.")
             
-            # 엑셀 파일 생성 로직 (메모리 버퍼 사용)
             export_data = []
             for _, row in hotel_df.iterrows():
                 r = [""] * 13
-                # [수정] 날짜 포맷팅: YYYY-MM-DD (요일)
                 try:
                     r[0] = format_date_kr(row['날짜'])
                 except Exception:
