@@ -4,54 +4,49 @@ from datetime import timedelta, date, datetime
 import calendar
 import io
 
-# [추가] 드래그 앤 드롭 기능을 위한 라이브러리 임포트
-try:
-    from streamlit_sortables import sort_items
-except ImportError:
-    st.error("드래그 기능을 사용하려면 라이브러리 설치가 필요합니다. 터미널에 `pip install streamlit-sortables`를 입력해주세요.")
-    def sort_items(items, key=None): return items
-
-# --- Page Basic Settings ---
+# --- 페이지 기본 설정 ---
 st.set_page_config(layout="wide", page_title="호텔 상품 관리 시스템 Final")
 
-# --- Custom Styles (Orange Theme + Button Styles) ---
+# --- 스타일 커스텀 (강력한 주황색 테마 + 버튼 테두리 제거) ---
 st.markdown("""
     <style>
-    /* 1. General Button (Secondary) */
+    /* 1. 일반 버튼 (Secondary) - 테두리/배경 완벽 제거 (아이콘처럼 보이게) */
     .stButton>button[kind="secondary"] {
         color: #e65100 !important; 
-        border-color: #ffcc80 !important; 
-        background-color: white !important;
+        border: none !important; 
+        background-color: transparent !important; 
+        box-shadow: none !important;
     }
     .stButton>button[kind="secondary"]:hover {
-        border-color: #e65100 !important;
-        color: #e65100 !important;
+        color: #ef6c00 !important;
         background-color: #fff3e0 !important;
+        border: none !important;
+    }
+    .stButton>button[kind="secondary"]:focus {
+        border: none !important;
+        box-shadow: none !important;
+        color: #e65100 !important;
     }
 
-    /* 2. Primary Button */
+    /* 2. 주요 버튼 (Primary) */
     .stButton>button[kind="primary"] {
         background-color: #ef6c00 !important; 
         border-color: #ef6c00 !important;
         color: white !important;
+        box-shadow: none !important;
     }
     .stButton>button[kind="primary"]:hover {
         background-color: #e65100 !important;
         border-color: #e65100 !important;
     }
-    .stButton>button[kind="primary"]:focus {
-        background-color: #e65100 !important;
-        border-color: #e65100 !important;
-        box-shadow: none !important;
-    }
 
-    /* 3. Tab Menu Selection Color */
+    /* 3. 탭 메뉴 선택 색상 */
     .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {
         border-top-color: #ef6c00 !important;
         color: #ef6c00 !important;
     }
 
-    /* 4. Calendar Style */
+    /* 4. 캘린더 스타일 */
     .calendar-table {
         width: 100%;
         border-collapse: collapse;
@@ -86,48 +81,18 @@ st.markdown("""
         border: 1px solid #ffe0b2;
     }
     
-    /* Price Tag (Orange) */
-    .price-tag {
-        font-weight: bold;
-        color: #ef6c00;
-    }
+    /* 태그 스타일 */
+    .price-tag { font-weight: bold; color: #ef6c00; }
+    .stock-tag { font-weight: bold; color: #1565c0; background-color: #e3f2fd; padding: 1px 4px; border-radius: 4px; font-size: 0.9em; }
+    .stock-zero { font-weight: bold; color: #b71c1c; background-color: #ffcdd2; border: 1px solid #ef9a9a; padding: 1px 4px; border-radius: 4px; font-size: 0.9em; }
+    .other-month { background-color: #f9f9f9; color: #ccc; }
     
-    /* Stock Tag (Default: Blue) */
-    .stock-tag {
-        font-weight: bold;
-        color: #1565c0;
-        background-color: #e3f2fd;
-        padding: 1px 4px;
-        border-radius: 4px;
-        font-size: 0.9em;
-    }
-
-    /* Stock 0 (Out of Stock) Tag - Red Emphasis */
-    .stock-zero {
-        font-weight: bold;
-        color: #b71c1c; 
-        background-color: #ffcdd2; 
-        border: 1px solid #ef9a9a;
-        padding: 1px 4px;
-        border-radius: 4px;
-        font-size: 0.9em;
-    }
-
-    .other-month {
-        background-color: #f9f9f9;
-        color: #ccc;
-    }
-
-    /* Remove border for small icon buttons */
-    div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
-        border: none !important;
-        padding: 0px 5px !important;
-        background: transparent !important;
-    }
+    /* 체크박스 간격 미세 조정 */
+    [data-testid="stCheckbox"] { margin-right: 0px; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- Data Storage (Session State) ---
+# --- 데이터 저장소 (Session State) ---
 if 'hotels' not in st.session_state:
     st.session_state.hotels = ["쏠비치 삼척", "소노벨 천안"]
 if 'products' not in st.session_state:
@@ -138,38 +103,38 @@ if 'products' not in st.session_state:
 if 'main_df' not in st.session_state:
     st.session_state.main_df = pd.DataFrame(columns=['날짜', '숙소명', '상품명', '요금', '재고', '판매상태'])
 
-# [New] Selected dates buffer for multi-range selection
+# 날짜 선택 버퍼 (복수 구간 선택용)
 if 'selected_dates_buffer' not in st.session_state:
     st.session_state.selected_dates_buffer = []
 
-# Calendar view current month
+# 캘린더 뷰 현재 월
 if 'cal_year' not in st.session_state:
     st.session_state.cal_year = date.today().year
 if 'cal_month' not in st.session_state:
     st.session_state.cal_month = date.today().month
 
-# For deletion confirmation
+# 삭제 확인용
 if 'confirm_delete' not in st.session_state:
     st.session_state.confirm_delete = False
 if 'hotel_to_delete' not in st.session_state:
     st.session_state.hotel_to_delete = None
 
-# --- Helper Functions ---
+# --- 편의 함수 ---
 def format_date_kr(d):
-    """YYYY-MM-DD (Day) format"""
+    """YYYY/MM/DD (요일) 형식으로 변환"""
     if isinstance(d, str):
         d = pd.to_datetime(d).date()
     elif isinstance(d, datetime):
         d = d.date()
         
     weekdays = ["월", "화", "수", "목", "금", "토", "일"]
-    return f"{d.year}-{d.month:02d}-{d.day:02d} ({weekdays[d.weekday()]})"
+    # [수정] YYYY/MM/DD (요일) 포맷
+    return f"{d.year}/{d.month:02d}/{d.day:02d} ({weekdays[d.weekday()]})"
 
 def generate_dates(start_date, end_date, weekdays):
     dates = []
     current_date = start_date
     while current_date <= end_date:
-        # python weekday: 0=Mon, 6=Sun
         if current_date.weekday() in weekdays:
             dates.append(current_date)
         current_date += timedelta(days=1)
@@ -184,7 +149,7 @@ def change_month(amount):
         st.session_state.cal_month = 12
         st.session_state.cal_year -= 1
 
-# Product Order Change Logic
+# 순서 변경 로직 함수
 def move_product(current_hotel, index, direction):
     all_products = st.session_state.products
     current_hotel_prods = [p for p in all_products if p['hotel'] == current_hotel]
@@ -206,7 +171,7 @@ def delete_product(current_hotel, index):
 
 
 # ==========================================
-# 1. Sidebar: Accommodation Selection
+# 1. 사이드바: 숙소 선택 및 관리
 # ==========================================
 with st.sidebar:
     st.title("🏢 숙소 선택")
@@ -263,7 +228,7 @@ with st.sidebar:
                         st.rerun()
 
 # ==========================================
-# 2. Main Work Area
+# 2. 메인 작업 영역
 # ==========================================
 if current_hotel:
     st.header(f"🏨 {current_hotel} 관리")
@@ -276,7 +241,6 @@ if current_hotel:
     with tab_prod:
         c_left, c_right = st.columns([1, 1.5], gap="large")
         
-        # [Left] Product Registration
         with c_left:
             st.subheader("상품 등록")
             with st.form("add_product_form", clear_on_submit=True):
@@ -290,10 +254,9 @@ if current_hotel:
                     elif new_prod_name in my_prods:
                         st.warning("이미 등록된 상품명입니다.")
 
-        # [Right] Product List
         with c_right:
             st.subheader("등록된 상품 순서 관리")
-            st.info("⬆️ ⬇️ 버튼을 눌러 순서를 변경하세요.")
+            st.caption("⬆️ ⬇️ 버튼을 눌러 순서를 변경하세요.")
             
             current_prods_list = [p for p in st.session_state.products if p['hotel'] == current_hotel]
             
@@ -333,23 +296,28 @@ if current_hotel:
             else:
                 # [A] 날짜 추가 섹션
                 st.markdown("#### 1. 날짜 및 요일 선택 (복수 추가 가능)")
-                st.caption("기간과 요일을 선택 후 **'⬇️ 기간 추가'** 버튼을 누르세요. 여러 구간을 추가할 수 있습니다.")
+                st.caption("기간과 요일을 선택 후 **'⬇️ 기간 추가'** 버튼을 누르세요.")
                 
                 c_d1, c_d2 = st.columns([1, 2])
                 with c_d1: 
                     d_range = st.date_input("기간 선택", [], help="시작일과 종료일을 선택하세요")
+                    if len(d_range) == 2:
+                        start_str = format_date_kr(d_range[0])
+                        end_str = format_date_kr(d_range[1])
+                        st.success(f"{start_str} ~ {end_str}")
+
                 with c_d2:
                     st.write("요일 필터")
                     ui_labels = ["일", "월", "화", "수", "목", "금", "토"]
                     py_weekdays = [6, 0, 1, 2, 3, 4, 5]
                     sel_days = []
                     
-                    cols = st.columns(7)
+                    # [수정] 요일 간격 좁히기: columns를 이용해 앞쪽으로 몰아넣기
+                    cols = st.columns([1,1,1,1,1,1,1, 10]) 
                     for i, label in enumerate(ui_labels):
                         if cols[i].checkbox(label, value=True, key=f"day_chk_{i}"):
                             sel_days.append(py_weekdays[i])
 
-                # 날짜 추가 버튼 로직
                 if st.button("⬇️  기간 추가", type="secondary"):
                     if len(d_range) != 2:
                         st.error("기간(시작일/종료일)을 모두 선택해주세요.")
@@ -360,20 +328,16 @@ if current_hotel:
                         if not new_dates:
                             st.warning("선택한 기간 내에 해당 요일이 없습니다.")
                         else:
-                            # 기존 리스트에 추가하고 중복 제거 후 정렬 (날짜 형식 문자열로 저장)
                             current_buffer = set(st.session_state.selected_dates_buffer)
                             for d in new_dates:
                                 current_buffer.add(format_date_kr(d))
-                            
-                            # 리스트로 변환하여 저장
                             st.session_state.selected_dates_buffer = sorted(list(current_buffer))
                             st.rerun()
 
-                # [B] 선택된 날짜 확인 및 삭제 섹션 (Multiselect 이용)
+                # [B] 선택된 날짜 확인 (삭제 가능)
                 if st.session_state.selected_dates_buffer:
                     st.markdown("---")
-                    st.markdown("##### ✅ 적용 대상 날짜 (삭제하려면 x 클릭)")
-                    
+                    st.markdown("##### ✅ 적용 대상 날짜 (x 눌러 삭제)")
                     updated_dates = st.multiselect(
                         "최종 선택된 날짜들",
                         options=st.session_state.selected_dates_buffer,
@@ -381,14 +345,13 @@ if current_hotel:
                         key="dates_multiselect",
                         label_visibility="collapsed"
                     )
-                    
                     if len(updated_dates) != len(st.session_state.selected_dates_buffer):
                         st.session_state.selected_dates_buffer = updated_dates
                         st.rerun()
                 
                 st.markdown("---")
 
-                # [C] 상품별 설정 및 저장
+                # [C] 상품별 설정
                 st.markdown("#### 2. 상품별 요금/재고 설정")
                 sel_work_prods = st.multiselect("작업할 상품 선택", my_products, default=my_products)
                 
@@ -396,7 +359,7 @@ if current_hotel:
                 for p in sel_work_prods:
                     st.markdown(f"**🔹 {p}**") 
                     pc1, pc2, pc3 = st.columns(3)
-                    # [수정] 데이터 생성 후 입력창이 비워지도록 value=None 고정 (key 변경으로 초기화 효과)
+                    # key값을 매번 다르게 주거나 value=None으로 초기화 유도
                     pr = pc1.number_input(f"요금 (원)", key=f"p_{p}", value=None, step=1000, placeholder="숫자 입력")
                     stk = pc2.number_input(f"재고 (개)", key=f"s_{p}", value=5)
                     sts = pc3.selectbox(f"상태", ["Y", "N"], key=f"st_{p}")
@@ -405,7 +368,6 @@ if current_hotel:
                 st.markdown("<br>", unsafe_allow_html=True)
                 
                 if st.button("💾 데이터 생성하기 (최종 저장)", type="primary", use_container_width=True):
-                    # 검증 로직
                     if not st.session_state.selected_dates_buffer:
                         st.error("🚨 '기간 추가'를 눌러 날짜를 먼저 담아주세요!")
                     elif not sel_work_prods:
@@ -419,11 +381,13 @@ if current_hotel:
                         if missing_price:
                             st.error("🚨 모든 상품의 요금을 입력해주세요.")
                         else:
-                            # 실제 데이터 생성 로직
                             final_dates_obj = []
                             for d_str in st.session_state.selected_dates_buffer:
+                                # YYYY/MM/DD (요일) 포맷에서 앞 10자리(YYYY/MM/DD) 추출
                                 d_only = d_str.split(" ")[0]
-                                final_dates_obj.append(pd.to_datetime(d_only).date())
+                                # '/'를 '-'로 바꾸거나 포맷에 맞춰 파싱
+                                d_parsed = datetime.strptime(d_only, "%Y/%m/%d").date()
+                                final_dates_obj.append(d_parsed)
                             
                             new_rows = []
                             for d in final_dates_obj:
@@ -433,12 +397,12 @@ if current_hotel:
                                         '요금': val['price'], '재고': val['stock'], '판매상태': val['status']
                                     })
                             
+                            # [수정] st.session_state.main_df 사용 (st.session 에러 해결)
                             st.session_state.main_df = pd.concat([st.session_state.main_df, pd.DataFrame(new_rows)], ignore_index=True)
                             st.session_state.main_df['날짜'] = pd.to_datetime(st.session_state.main_df['날짜']).dt.date
                             st.session_state.main_df.drop_duplicates(subset=['날짜', '숙소명', '상품명'], keep='last', inplace=True)
                             st.session_state.main_df.sort_values(['날짜', '상품명'], inplace=True)
                             
-                            # 성공 후 초기화 (선택된 날짜 버퍼 비우기)
                             st.session_state.selected_dates_buffer = []
                             st.success(f"✅ {len(new_rows)}건의 데이터가 성공적으로 생성되었습니다!")
                             st.rerun()
@@ -462,7 +426,7 @@ if current_hotel:
         if view_type == "📋 리스트 표보기 (직접 수정 가능)":
             if not hotel_df.empty:
                 column_config = {
-                    "날짜": st.column_config.DateColumn("날짜", format="YYYY-MM-DD"),
+                    "날짜": st.column_config.DateColumn("날짜", format="YYYY/MM/DD"),
                     "상품명": st.column_config.TextColumn("상품명", disabled=True),
                     "요금": st.column_config.NumberColumn("요금", format="%d", step=1000), 
                     "재고": st.column_config.NumberColumn("재고", step=1),
@@ -503,11 +467,8 @@ if current_hotel:
             mask = (hotel_df['날짜'].dt.year == curr_y) & (hotel_df['날짜'].dt.month == curr_m)
             month_data = hotel_df[mask].copy()
             
-            # [수정] 캘린더 시작 요일을 일요일로 설정
             calendar.setfirstweekday(calendar.SUNDAY)
             cal = calendar.monthcalendar(curr_y, curr_m)
-            
-            # 헤더도 일~토 순서로 변경
             html_cal = "<table class='calendar-table'><thead><tr>" + "".join([f"<th>{d}</th>" for d in ["일", "월", "화", "수", "목", "금", "토"]]) + "</tr></thead><tbody>"
             for week in cal:
                 html_cal += "<tr>"
