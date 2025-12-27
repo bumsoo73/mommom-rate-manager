@@ -25,10 +25,10 @@ st.markdown("""
         background-color: #fff3e0 !important;
     }
     
-    /* Primary Button (Orange - Data Save) */
+    /* Primary Button (Orange -> Dark Orange on Hover) */
     .stButton>button[kind="primary"] {
-        background-color: #ff6d00 !important; 
-        border-color: #ff6d00 !important;
+        background-color: #ff9800 !important; 
+        border-color: #ff9800 !important;
         color: white !important;
         box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
@@ -37,7 +37,21 @@ st.markdown("""
         border-color: #e65100 !important;
     }
 
-    /* Black Button Style (For Delete & Add Period) */
+    /* Custom Red Button for Period Add (Emphasis) */
+    .period-add-btn button {
+        background-color: #d32f2f !important; /* Red */
+        border-color: #d32f2f !important;
+        color: white !important;
+        width: 100%; 
+        font-size: 0.9em !important;
+        padding: 0.25rem 0.5rem !important;
+    }
+    .period-add-btn button:hover {
+        background-color: #b71c1c !important; /* Darker Red */
+        border-color: #b71c1c !important;
+    }
+
+    /* Custom Black Button for Delete */
     .black-btn > button {
         background-color: #212121 !important;
         border-color: #212121 !important;
@@ -45,38 +59,63 @@ st.markdown("""
         width: 100%;
     }
     .black-btn > button:hover {
-        background-color: #424242 !important;
-        border-color: #424242 !important;
+        background-color: #000000 !important;
+        border-color: #000000 !important;
+        color: white !important;
     }
 
     /* Calendar & Table */
     .calendar-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    .calendar-table th { background-color: #fff3e0; padding: 8px; text-align: center; border: 1px solid #ddd; color: #e65100; }
+    .calendar-table th { background-color: #fff3e0; padding: 8px; text-align: center; border: 1px solid #ddd; color: #555; }
+    
+    /* 요일별 색상 */
+    .calendar-table th.day-sun { color: #d32f2f !important; } 
+    .calendar-table th.day-sat { color: #1976d2 !important; } 
+    .calendar-table th.day-fri { color: #1976d2 !important; } 
+    .calendar-table th.day-sat-custom { color: #d32f2f !important; } 
+
     .calendar-table td { vertical-align: top; height: 100px; border: 1px solid #ddd; padding: 5px; width: 14%; }
     .day-number { font-weight: bold; margin-bottom: 5px; display: block; color: #555; }
-    .prod-item { font-size: 0.75em; background-color: #fff8e1; margin-bottom: 2px; padding: 2px 4px; border-radius: 3px; color: #bf360c; border: 1px solid #ffe0b2; }
     
+    /* Product Item in Calendar */
+    .prod-item { 
+        font-size: 0.75em; 
+        background-color: #fff8e1; 
+        margin-bottom: 2px; 
+        padding: 2px 4px; 
+        border-radius: 3px; 
+        color: #bf360c; 
+        border: 1px solid #ffe0b2; 
+    }
+    
+    /* Special Backgrounds */
+    .bg-soldout { background-color: #ffebee !important; border: 1px solid #ef9a9a !important; } 
+    .bg-stop { background-color: #eeeeee !important; border: 1px solid #bdbdbd !important; color: #757575 !important; } 
+
     /* Tags */
     .price-tag { font-weight: bold; color: #ef6c00; }
     .stock-tag { font-weight: bold; color: #1565c0; background-color: #e3f2fd; padding: 1px 4px; border-radius: 4px; font-size: 0.9em; }
     .stock-zero { font-weight: bold; color: #b71c1c; background-color: #ffcdd2; border: 1px solid #ef9a9a; padding: 1px 4px; border-radius: 4px; font-size: 0.9em; }
-    .stop-sales { font-weight: bold; color: white; background-color: #424242; padding: 1px 4px; border-radius: 4px; font-size: 0.85em; margin-right: 3px; }
+    .stop-sales { font-weight: bold; color: white; background-color: #616161; padding: 1px 4px; border-radius: 4px; font-size: 0.85em; margin-right: 3px; }
     .other-month { background-color: #f9f9f9; color: #ccc; }
     
+    /* Date Badges */
+    .date-badge {
+        display: inline-block; padding: 2px 8px; margin: 2px; border-radius: 12px;
+        font-size: 0.85em; font-weight: bold; color: #333; border: 1px solid #ddd;
+    }
+    .badge-fri { background-color: #e3f2fd; color: #1565c0; border-color: #bbdefb; } 
+    .badge-sat { background-color: #ffebee; color: #c62828; border-color: #ffcdd2; } 
+    .badge-normal { background-color: #f5f5f5; color: #616161; } 
+
     /* UI Adjustments */
     div[data-testid="column"] button[kind="secondary"] { border: 0px solid transparent !important; background: transparent !important; }
     [data-testid="stCheckbox"] { margin-right: 0px; padding-right: 0px; }
     
-    /* Selected Date Box */
     .selected-date-box {
-        background-color: #e3f2fd;
-        padding: 10px;
-        border-radius: 5px;
-        border: 1px solid #90caf9;
-        color: #1565c0;
-        font-weight: bold;
-        text-align: center;
-        margin-bottom: 10px;
+        background-color: #fff3e0; padding: 10px; border-radius: 5px;
+        border: 1px solid #ffe0b2; color: #e65100; font-weight: bold;
+        text-align: center; margin-bottom: 10px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -172,13 +211,19 @@ def save_hotel_data(hotel_name, df):
         ws.update([['날짜', '숙소명', '상품명', '요금', '재고', '판매상태']])
 
 # --- Helpers ---
+def get_kr_weekday(d):
+    days = ["(월)", "(화)", "(수)", "(목)", "(금)", "(토)", "(일)"]
+    return days[d.weekday()]
+
 def format_date_kr(d):
     if isinstance(d, str):
         try: d = pd.to_datetime(d).date()
         except: return d
     elif isinstance(d, datetime): d = d.date()
-    weekdays = ["월", "화", "수", "목", "금", "토", "일"]
-    return f"{d.year}-{d.month:02d}-{d.day:02d} ({weekdays[d.weekday()]})"
+    return f"{d.year}-{d.month:02d}-{d.day:02d} {get_kr_weekday(d)}"
+
+def format_date_simple(d):
+    return f"{d.year}-{d.month:02d}-{d.day:02d}"
 
 def generate_dates(start, end, weekdays):
     dates = []
@@ -220,6 +265,11 @@ def update_download_log():
         st.session_state.download_logs = []
     st.session_state.download_logs.insert(0, now_str)
 
+def toggle_all_days():
+    val = st.session_state.all_days_check
+    for i in range(7):
+        st.session_state[f"wd_{i}"] = val
+
 # --- Initialization ---
 if 'init' not in st.session_state:
     with st.spinner("데이터 로딩 중..."):
@@ -232,6 +282,11 @@ if 'init' not in st.session_state:
         st.session_state.confirm_delete_req = False
         st.session_state.input_reset_key = 0
         st.session_state.download_logs = []
+        
+        for i in range(7):
+            if f"wd_{i}" not in st.session_state:
+                st.session_state[f"wd_{i}"] = True
+                
         st.session_state.init = True
 
 # ==========================================
@@ -244,23 +299,27 @@ with st.sidebar:
     search_q = st.text_input("search_hotel", placeholder="검색어 입력 후 엔터", label_visibility="collapsed")
     st.caption("검색어 입력 후 아래 목록에서 선택")
     
-    # [요청] 최신순 정렬
     sorted_hotels = st.session_state.hotels[::-1]
     filtered_hotels = [h for h in sorted_hotels if search_q in h] if search_q else sorted_hotels
     
     current_hotel = None
     if filtered_hotels:
-        current_hotel = st.selectbox("숙소 선택", filtered_hotels)
-        if 'last_hotel' not in st.session_state or st.session_state.last_hotel != current_hotel:
-            with st.spinner(f"'{current_hotel}' 데이터 로딩 중..."):
-                st.session_state.main_df = get_hotel_data(current_hotel)
-                st.session_state.last_hotel = current_hotel
+        # [요청] 초기 선택 없음 (index=None은 selectbox에서 지원 안함, placeholder로 우회하거나 비워둠)
+        # Streamlit selectbox default is 0. To make it empty, we can add a placeholder option.
+        hotel_options = ["(숙소를 선택하세요)"] + filtered_hotels
+        selected_option = st.selectbox("숙소 선택", hotel_options)
+        
+        if selected_option != "(숙소를 선택하세요)":
+            current_hotel = selected_option
+            if 'last_hotel' not in st.session_state or st.session_state.last_hotel != current_hotel:
+                with st.spinner(f"'{current_hotel}' 데이터 로딩 중..."):
+                    st.session_state.main_df = get_hotel_data(current_hotel)
+                    st.session_state.last_hotel = current_hotel
     else:
         st.warning("등록된 숙소가 없습니다.")
 
     st.markdown("---")
     
-    # [요청] 토글 디폴트 펼침
     with st.expander("⚙️ 숙소 리스트 관리", expanded=True):
         t1, t2 = st.tabs(["추가", "삭제"])
         with t1:
@@ -275,28 +334,18 @@ with st.sidebar:
                         time.sleep(1)
                         st.rerun()
         with t2:
-            # [요청] 삭제 UI 개선: 버튼 위에 숙소명 표시
             if current_hotel:
                 st.caption(f"현재 선택된 숙소: **{current_hotel}**")
                 
-                # [요청] 검정색 버튼 (Custom Class)
                 c_del_btn = st.columns([1])[0]
                 with c_del_btn:
-                    # Streamlit button style hack using class mapping
-                    # But easiest is to use a container with specific class or just native primary if acceptable.
-                    # User wanted Black button. We defined .black-btn in CSS.
-                    # Since Streamlit doesn't allow class assignment to button directly easily,
-                    # We will use Primary button here for consistency as requested in previous turn for 'Period Add'
-                    # But actually user said 'Current Hotel Delete' should be black.
-                    # We will wrap it.
-                    
-                    if st.button("현재 숙소 삭제", type="primary", use_container_width=True, key="del_hotel_btn"):
+                    st.markdown('<div class="black-btn">', unsafe_allow_html=True)
+                    if st.button("현재 숙소 삭제", key="del_hotel_btn", use_container_width=True):
                         st.session_state.confirm_delete_req = True
-                        st.rerun()
+                    st.markdown('</div>', unsafe_allow_html=True)
             else:
                 st.info("삭제할 숙소를 선택하세요.")
             
-            # [요청] 튕기지 않고 바로 확인 메시지 (토글 안에서)
             if st.session_state.get('confirm_delete_req'):
                 st.markdown("---")
                 st.warning(f"정말 '{current_hotel}'을(를) 삭제하시겠습니까?")
@@ -367,58 +416,67 @@ if current_hotel:
             else:
                 c_d1, c_d2 = st.columns([1, 2])
                 with c_d1:
-                    dr = st.date_input("기간", [], help="시작~종료일")
+                    dr = st.date_input("기간", [], help="시작~종료일", key="date_picker")
                     if len(dr)==2: 
                         st.markdown(f"<div class='selected-date-box'>선택된 기간: {format_date_kr(dr[0])} ~ {format_date_kr(dr[1])}</div>", unsafe_allow_html=True)
+                        
+                        # [요청] 기간 추가 버튼: 작고 빨간색, 선택된 기간 바로 밑에 위치
+                        st.markdown('<div class="period-add-btn">', unsafe_allow_html=True)
+                        if st.button("   ⬇️ 기간 추가 (필수) ⬇️  ", key="add_pd_btn"):
+                            if len(dr)==2: # 요일 체크는 나중에 해도 됨, 일단 기간이 있으면
+                                # 요일 가져오기
+                                sel_ds = []
+                                for i in range(7):
+                                    if st.session_state.get(f"wd_{i}", True): # Default True if not set
+                                        p_day = 6 if i==0 else i-1
+                                        sel_ds.append(p_day)
+                                
+                                if sel_ds:
+                                    nds = generate_dates(dr[0], dr[1], sel_ds)
+                                    if nds:
+                                        buf = set(st.session_state.selected_dates_buffer)
+                                        for d in nds: buf.add(format_date_kr(d))
+                                        st.session_state.selected_dates_buffer = sorted(list(buf))
+                                        st.rerun()
+                                    else: st.warning("해당 요일 없음")
+                                else: st.error("요일을 선택해주세요.")
+                            else: st.error("기간을 선택해주세요.")
+                        st.markdown('</div>', unsafe_allow_html=True)
+                        
                     else:
                         st.info("기간을 선택해주세요.")
                 with c_d2:
-                    st.write("요일")
+                    c_label, c_all = st.columns([2, 8])
+                    with c_label: st.write("요일")
+                    with c_all: st.checkbox("전체 선택", key="all_days_check", on_change=toggle_all_days)
+                    
                     d_lbls = ["일","월","화","수","목","금","토"]
-                    sel_ds = []
                     cols = st.columns([1]*7 + [10])
                     for i, l in enumerate(d_lbls):
-                        if cols[i].checkbox(l, True, key=f"wd{i}"): sel_ds.append(6 if i==0 else i-1)
-                
-                # [요청] 기간 추가 버튼: 검정색 (CSS 클래스 적용)
-                st.markdown("""
-                <style>
-                /* Apply styles to the button inside the specific column/container if possible. 
-                   Since we can't easily add classes to buttons, we use a CSS selector based on tree structure or assume custom component.
-                   Here we use a container class wrapper. */
-                .black-button button {
-                    background-color: #212121 !important;
-                    color: white !important;
-                    border: none !important;
-                }
-                .black-button button:hover {
-                    background-color: #424242 !important;
-                }
-                </style>
-                """, unsafe_allow_html=True)
-                
-                col_btn, _ = st.columns([2, 5]) # 너비 조절
-                with col_btn:
-                    # div wrapper for styling
-                    st.markdown('<div class="black-button">', unsafe_allow_html=True)
-                    if st.button("⬇️ 기간 추가 (필수) ⬇️", key="add_pd_btn", use_container_width=True):
-                        if len(dr)==2 and sel_ds:
-                            nds = generate_dates(dr[0], dr[1], sel_ds)
-                            if nds:
-                                buf = set(st.session_state.selected_dates_buffer)
-                                for d in nds: buf.add(format_date_kr(d))
-                                st.session_state.selected_dates_buffer = sorted(list(buf))
-                                st.rerun()
-                            else: st.warning("해당 요일 없음")
-                        else: st.error("기간과 요일을 모두 선택해주세요.")
-                    st.markdown('</div>', unsafe_allow_html=True)
+                        cols[i].checkbox(l, key=f"wd_{i}")
                 
                 if st.session_state.selected_dates_buffer:
                     st.markdown("---")
-                    upd_dates = st.multiselect("적용 날짜 확인 (삭제 가능)", st.session_state.selected_dates_buffer, st.session_state.selected_dates_buffer)
-                    if len(upd_dates) != len(st.session_state.selected_dates_buffer):
-                        st.session_state.selected_dates_buffer = upd_dates
-                        st.rerun()
+                    st.write("##### ✅ 적용 대상 날짜 확인")
+                    badges = ""
+                    for d_str in st.session_state.selected_dates_buffer:
+                        try:
+                            d_only = d_str.split(" ")[0]
+                            dt = datetime.strptime(d_only, "%Y-%m-%d").date()
+                            w = dt.weekday()
+                            if w == 4: cls = "badge-fri"
+                            elif w == 5: cls = "badge-sat"
+                            else: cls = "badge-normal"
+                            badges += f"<span class='date-badge {cls}'>{d_str}</span>"
+                        except:
+                            badges += f"<span class='date-badge badge-normal'>{d_str}</span>"
+                    st.markdown(f"<div>{badges}</div>", unsafe_allow_html=True)
+                    
+                    with st.expander("날짜 목록 편집 (삭제하기)"):
+                        upd_dates = st.multiselect("삭제할 날짜를 제거하세요", st.session_state.selected_dates_buffer, st.session_state.selected_dates_buffer)
+                        if len(upd_dates) != len(st.session_state.selected_dates_buffer):
+                            st.session_state.selected_dates_buffer = upd_dates
+                            st.rerun()
                 
                 st.markdown("---")
                 sel_works = st.multiselect("상품 선택", my_p_names, my_p_names)
@@ -427,7 +485,7 @@ if current_hotel:
                 reset_k = st.session_state.input_reset_key
                 
                 for p in sel_works:
-                    st.markdown(f"🔹 {p}")
+                    st.markdown(f"🛏️ {p}") 
                     c1, c2, c3 = st.columns(3)
                     pr = c1.number_input("요금", key=f"pr_{p}_{reset_k}", step=1000, value=None, placeholder="숫자 입력")
                     stk = c2.number_input("재고", key=f"stk_{p}_{reset_k}", value=5)
@@ -436,8 +494,7 @@ if current_hotel:
                 
                 st.markdown("<br>", unsafe_allow_html=True)
                 
-                # [요청] 주황색 버튼 (Primary)
-                if st.button("데이터 입력하기 (저장)", type="primary", use_container_width=True):
+                if st.button("💾 데이터 입력하기 (저장)", type="primary", use_container_width=True):
                     if not st.session_state.selected_dates_buffer: st.error("날짜를 추가해주세요.")
                     elif not sel_works: st.error("상품을 선택해주세요.")
                     else:
@@ -448,7 +505,9 @@ if current_hotel:
                         else:
                             final_ds = []
                             for s in st.session_state.selected_dates_buffer:
-                                try: final_ds.append(datetime.strptime(s.split()[0], "%Y-%m-%d").date())
+                                try: 
+                                    d_only = s.split(" ")[0] # YYYY-MM-DD
+                                    final_ds.append(datetime.strptime(d_only, "%Y-%m-%d").date())
                                 except: pass
                             
                             new_rows = []
@@ -468,7 +527,6 @@ if current_hotel:
                             save_hotel_data(current_hotel, st.session_state.main_df)
                             st.session_state.selected_dates_buffer = [] 
                             st.session_state.input_reset_key += 1
-                            
                             st.success("저장 완료")
                             time.sleep(1)
                             st.rerun()
@@ -494,13 +552,14 @@ if current_hotel:
                 cols = ['날짜', '상품명', '상품관리코드', '요금', '재고', '판매상태']
                 list_view_df = list_view_df[cols]
 
+                # [요청] 요금 콤마 포맷, 날짜(요일) 영어 (ddd) -> YYYY-MM-DD (Mon)
                 edited = st.data_editor(
                     list_view_df,
                     column_config={
-                        "날짜": st.column_config.DateColumn(format="YYYY-MM-DD"),
+                        "날짜": st.column_config.DateColumn(format="YYYY-MM-DD (ddd)"), 
                         "상품명": st.column_config.TextColumn(disabled=True),
                         "상품관리코드": st.column_config.TextColumn(disabled=True),
-                        "요금": st.column_config.NumberColumn(format="%d"),
+                        "요금": st.column_config.NumberColumn(format="%d"), 
                     },
                     use_container_width=True, hide_index=True
                 )
@@ -528,7 +587,18 @@ if current_hotel:
             
             calendar.setfirstweekday(calendar.SUNDAY)
             cal = calendar.monthcalendar(y, m)
-            html = "<table class='calendar-table'><thead><tr>" + "".join([f"<th>{d}</th>" for d in ["일","월","화","수","목","금","토"]]) + "</tr></thead><tbody>"
+            
+            # [요청] 금(Fri)=파랑, 토(Sat)=빨강 헤더 클래스 적용
+            days_header = ["일", "월", "화", "수", "목", "금", "토"]
+            th_html = ""
+            for i, d_name in enumerate(days_header):
+                cls = ""
+                if i == 0: cls = "day-sun"
+                elif i == 5: cls = "day-fri"
+                elif i == 6: cls = "day-sat-custom"
+                th_html += f"<th class='{cls}'>{d_name}</th>"
+            
+            html = f"<table class='calendar-table'><thead><tr>{th_html}</tr></thead><tbody>"
             
             for week in cal:
                 html += "<tr>"
@@ -544,16 +614,23 @@ if current_hotel:
                         cell = f"<span class='day-number'>{d}</span>"
                         for _, r in recs.iterrows():
                             nm = r['상품명']
+                            q = r['재고']
+                            is_stop = (r['판매상태'] == 'N')
+                            is_soldout = (q == 0)
+                            
+                            # [요청] 배경색 로직: 재고 0(옅은 빨강), N(회색)
+                            box_cls = "prod-item"
+                            if is_soldout: box_cls = "bg-soldout"
+                            elif is_stop: box_cls = "bg-stop"
+                            
                             if is_stk:
-                                q = r['재고']
-                                is_stop = (r['판매상태'] == 'N')
                                 q_txt = f"{q}개" if q > 0 else "0 (품절)"
                                 stop_txt = "<span class='stop-sales'>[판매중지]</span>" if is_stop else ""
-                                cls = "stock-zero" if q == 0 else "stock-tag"
-                                cell += f"<div class='prod-item'>{nm}<br>{stop_txt}<span class='{cls}'>{q_txt}</span></div>"
+                                cls = "stock-zero" if is_soldout else "stock-tag"
+                                cell += f"<div class='prod-item {box_cls}'>{nm}<br>{stop_txt}<span class='{cls}'>{q_txt}</span></div>"
                             else:
                                 txt, cls = f"{r['요금']:,}", "price-tag"
-                                cell += f"<div class='prod-item'>{nm}<br><span class='{cls}'>{txt}</span></div>"
+                                cell += f"<div class='prod-item {box_cls}'>{nm}<br><span class='{cls}'>{txt}</span></div>"
                         html += f"<td>{cell}</td>"
                 html += "</tr>"
             html += "</tbody></table>"
@@ -570,14 +647,17 @@ if current_hotel:
             
             out_rows = []
             for _, r in show_df.iterrows():
+                # [요청] 엑셀 J열 매핑
                 row = [""]*13
                 row[0] = format_date_kr(r['날짜'])
                 row[1] = r['상품명']
-                row[2] = code_map.get(r['상품명'], '')
-                row[6] = r['요금']; row[8] = r['재고']; row[12] = r['판매상태']
+                row[6] = r['요금']
+                row[8] = r['재고']
+                row[9] = code_map.get(r['상품명'], '') # J열에 상품코드
+                row[12] = r['판매상태']
                 out_rows.append(row)
             
-            df_ex = pd.DataFrame(out_rows, columns=["날짜(A)", "상품명(B)", "상품코드(C)", "D", "E", "F", "요금(G)", "H", "재고(I)", "J", "K", "L", "판매상태(M)"])
+            df_ex = pd.DataFrame(out_rows, columns=["날짜(A)", "상품명(B)", "C", "D", "E", "F", "요금(G)", "H", "재고(I)", "상품코드(J)", "K", "L", "판매상태(M)"])
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='xlsxwriter') as w: df_ex.to_excel(w, index=False, sheet_name='Sheet1')
             output.seek(0)
