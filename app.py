@@ -408,7 +408,7 @@ if current_hotel:
                         st.rerun()
                     elif new_p in my_p: st.warning("이미 존재함")
         with c2:
-            st.subheader("상품 순서 관리 (변경 후 새로고침 필수 🔁)")
+            st.subheader("상품 순서 관리")
             curr_p_objs = [p for p in st.session_state.products if p['hotel'] == current_hotel]
             if curr_p_objs:
                 for i, p in enumerate(curr_p_objs):
