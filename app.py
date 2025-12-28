@@ -10,6 +10,40 @@ from oauth2client.service_account import ServiceAccountCredentials
 # --- Page Basic Settings ---
 st.set_page_config(layout="wide", page_title="맘맘 요금재고 관리툴")
 
+# ==========================================
+# 🔒 [보안 강화] 비밀번호 인증 로직 (여기 추가됨)
+# ==========================================
+def check_password():
+    """Returns `True` if the user had a correct password."""
+
+    def password_entered():
+        """Checks whether a password entered by the user is correct."""
+        if st.session_state["password"] == st.secrets["passwords"]["access_code"]:
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]  # 비밀번호 흔적 지우기
+        else:
+            st.session_state["password_correct"] = False
+
+    if "password_correct" not in st.session_state:
+        # 처음 접속 시
+        st.text_input(
+            "비밀번호를 입력하세요", type="password", on_change=password_entered, key="password"
+        )
+        return False
+    elif not st.session_state["password_correct"]:
+        # 비밀번호 틀렸을 때
+        st.text_input(
+            "비밀번호를 입력하세요", type="password", on_change=password_entered, key="password"
+        )
+        st.error("😕 비밀번호가 틀렸습니다.")
+        return False
+    else:
+        # 비밀번호 맞았을 때
+        return True
+
+if not check_password():
+    st.stop()  # 비밀번호가 틀리거나 입력 안 하면 여기서 코드 실행 중단 (보안)
+
 # --- Custom Styles ---
 st.markdown("""
     <style>
