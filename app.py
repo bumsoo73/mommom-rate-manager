@@ -13,7 +13,7 @@ st.set_page_config(layout="wide", page_title="맘맘 요금재고 관리툴")
 # --- Custom Styles ---
 st.markdown("""
     <style>
-    /* 1. Secondary Button (Transparent) */
+    /* Secondary Button (Transparent) */
     .stButton>button[kind="secondary"] {
         color: #e65100 !important; 
         border: none !important; 
@@ -25,9 +25,9 @@ st.markdown("""
         background-color: #fff3e0 !important;
     }
     
-    /* 2. Primary Button (Orange -> Dark Orange on Hover) */
+    /* Primary Button (Orange -> Dark Orange on Hover) */
     .stButton>button[kind="primary"] {
-        background-color: #ff9800 !important; /* 주황색 */
+        background-color: #ff9800 !important; 
         border-color: #ff9800 !important;
         color: white !important;
         box-shadow: 0 2px 5px rgba(0,0,0,0.2);
@@ -37,20 +37,21 @@ st.markdown("""
         border-color: #e65100 !important;
     }
 
-    /* 3. Period Add Button (Red & Compact) */
+    /* Custom Red Button for Period Add (Emphasis) */
     .period-add-btn button {
-        background-color: #d32f2f !important; /* 빨간색 */
+        background-color: #d32f2f !important; /* Red */
         border-color: #d32f2f !important;
         color: white !important;
-        width: 100% !important; /* 컨테이너 너비에 맞춤 */
-        font-weight: bold !important;
+        width: 100%; 
+        font-size: 0.9em !important;
+        padding: 0.25rem 0.5rem !important;
     }
     .period-add-btn button:hover {
-        background-color: #b71c1c !important; /* 진한 빨강 */
+        background-color: #b71c1c !important; /* Darker Red */
         border-color: #b71c1c !important;
     }
 
-    /* 4. Delete Button (Black) */
+    /* Custom Black Button for Delete */
     .black-btn > button {
         background-color: #212121 !important;
         border-color: #212121 !important;
@@ -60,6 +61,7 @@ st.markdown("""
     .black-btn > button:hover {
         background-color: #000000 !important;
         border-color: #000000 !important;
+        color: white !important;
     }
 
     /* Calendar & Table */
@@ -67,25 +69,61 @@ st.markdown("""
     .calendar-table th { background-color: #fff3e0; padding: 8px; text-align: center; border: 1px solid #ddd; color: #555; }
     
     /* 요일별 색상 */
-    .calendar-table th.day-sun { color: #d32f2f !important; } /* 일 - 빨강 */
-    .calendar-table th.day-sat { color: #1976d2 !important; } /* 토 - 파랑 */
-    .calendar-table th.day-fri { color: #1976d2 !important; } /* 금 - 파랑 */
-    .calendar-table th.day-sat-custom { color: #d32f2f !important; } /* 토 - 빨강 */
+    .calendar-table th.day-sun { color: #d32f2f !important; } 
+    .calendar-table th.day-sat { color: #1976d2 !important; } 
+    .calendar-table th.day-fri { color: #1976d2 !important; } 
+    .calendar-table th.day-sat-custom { color: #d32f2f !important; } 
 
     .calendar-table td { vertical-align: top; height: 100px; border: 1px solid #ddd; padding: 5px; width: 14%; }
     .day-number { font-weight: bold; margin-bottom: 5px; display: block; color: #555; }
     
-    .prod-item { font-size: 0.75em; background-color: #fff8e1; margin-bottom: 2px; padding: 2px 4px; border-radius: 3px; color: #bf360c; border: 1px solid #ffe0b2; }
-    
-    .bg-soldout { background-color: #ffebee !important; border: 1px solid #ef9a9a !important; } 
-    .bg-stop { background-color: #eeeeee !important; border: 1px solid #bdbdbd !important; color: #757575 !important; } 
+    /* Product Item in Calendar (Normal) */
+    .prod-item { 
+        font-size: 0.75em; 
+        background-color: #fff8e1; 
+        margin-bottom: 2px; 
+        padding: 2px 4px; 
+        border-radius: 3px; 
+        color: #bf360c; 
+        border: 1px solid #ffe0b2; 
+    }
 
+    /* Product Item (Sold Out) */
+    .prod-item-soldout {
+        font-size: 0.75em;
+        background-color: #ffebee !important; /* 옅은 빨간색 배경 */
+        margin-bottom: 2px;
+        padding: 2px 4px;
+        border-radius: 3px;
+        color: #c62828 !important;
+        border: 1px solid #ef9a9a !important;
+    }
+
+    /* Special Background for Stop Sales (Gray) */
+    /* .prod-item 클래스와 함께 사용하여 폰트 사이즈 상속 */
+    .bg-stop { 
+        background-color: #eeeeee !important; 
+        border: 1px solid #bdbdbd !important; 
+        color: #757575 !important; 
+    } 
+
+    /* Tags */
     .price-tag { font-weight: bold; color: #ef6c00; }
     .stock-tag { font-weight: bold; color: #1565c0; background-color: #e3f2fd; padding: 1px 4px; border-radius: 4px; font-size: 0.9em; }
     .stock-zero { font-weight: bold; color: #b71c1c; background-color: #ffcdd2; border: 1px solid #ef9a9a; padding: 1px 4px; border-radius: 4px; font-size: 0.9em; }
     .stop-sales { font-weight: bold; color: white; background-color: #616161; padding: 1px 4px; border-radius: 4px; font-size: 0.85em; margin-right: 3px; }
     .other-month { background-color: #f9f9f9; color: #ccc; }
     
+    /* Date Badges */
+    .date-badge {
+        display: inline-block; padding: 2px 8px; margin: 2px; border-radius: 12px;
+        font-size: 0.85em; font-weight: bold; color: #333; border: 1px solid #ddd;
+    }
+    .badge-fri { background-color: #e3f2fd; color: #1565c0; border-color: #bbdefb; } 
+    .badge-sat { background-color: #ffebee; color: #c62828; border-color: #ffcdd2; } 
+    .badge-normal { background-color: #f5f5f5; color: #616161; } 
+
+    /* UI Adjustments */
     div[data-testid="column"] button[kind="secondary"] { border: 0px solid transparent !important; background: transparent !important; }
     [data-testid="stCheckbox"] { margin-right: 0px; padding-right: 0px; }
     
@@ -262,6 +300,7 @@ if 'init' not in st.session_state:
         st.session_state.confirm_delete_req = False
         st.session_state.input_reset_key = 0
         st.session_state.download_logs = []
+        st.session_state.save_message = "" # 저장 메시지 상태
         
         for i in range(7):
             if f"wd_{i}" not in st.session_state:
@@ -294,6 +333,7 @@ with st.sidebar:
                 with st.spinner(f"'{current_hotel}' 데이터 로딩 중..."):
                     st.session_state.main_df = get_hotel_data(current_hotel)
                     st.session_state.last_hotel = current_hotel
+                    st.session_state.save_message = ""
     else:
         st.warning("등록된 숙소가 없습니다.")
 
@@ -398,9 +438,8 @@ if current_hotel:
                     if len(dr)==2: 
                         st.markdown(f"<div class='selected-date-box'>선택된 기간: {format_date_kr(dr[0])} ~ {format_date_kr(dr[1])}</div>", unsafe_allow_html=True)
                         
-                        # [요청] 기간 추가 버튼: 빨간색, 작게, 바로 아래 배치
                         st.markdown('<div class="period-add-btn">', unsafe_allow_html=True)
-                        if st.button("⬇️ㅤ기간 추가 (필수❗)   ⬇️", key="add_pd_btn"):
+                        if st.button("⬇️  기간 추가 (필수‼️)  ⬇️", key="add_pd_btn"):
                             if len(dr)==2:
                                 sel_ds = []
                                 for i in range(7):
@@ -435,15 +474,25 @@ if current_hotel:
                 if st.session_state.selected_dates_buffer:
                     st.markdown("---")
                     st.write("##### ✅ 적용 대상 날짜 확인 (x 눌러 삭제)")
-                    upd_dates = st.multiselect(
-                        "선택된 날짜들", 
-                        st.session_state.selected_dates_buffer, 
-                        st.session_state.selected_dates_buffer,
-                        label_visibility="collapsed"
-                    )
-                    if len(upd_dates) != len(st.session_state.selected_dates_buffer):
-                        st.session_state.selected_dates_buffer = upd_dates
-                        st.rerun()
+                    badges = ""
+                    for d_str in st.session_state.selected_dates_buffer:
+                        try:
+                            d_only = d_str.split(" ")[0]
+                            dt = datetime.strptime(d_only, "%Y-%m-%d").date()
+                            w = dt.weekday()
+                            if w == 4: cls = "badge-fri"
+                            elif w == 5: cls = "badge-sat"
+                            else: cls = "badge-normal"
+                            badges += f"<span class='date-badge {cls}'>{d_str}</span>"
+                        except:
+                            badges += f"<span class='date-badge badge-normal'>{d_str}</span>"
+                    st.markdown(f"<div>{badges}</div>", unsafe_allow_html=True)
+                    
+                    with st.expander("날짜 목록 편집 (삭제하기)"):
+                        upd_dates = st.multiselect("삭제할 날짜를 제거하세요", st.session_state.selected_dates_buffer, st.session_state.selected_dates_buffer)
+                        if len(upd_dates) != len(st.session_state.selected_dates_buffer):
+                            st.session_state.selected_dates_buffer = upd_dates
+                            st.rerun()
                 
                 st.markdown("---")
                 sel_works = st.multiselect("상품 선택", my_p_names, my_p_names)
@@ -499,8 +548,15 @@ if current_hotel:
                             st.rerun()
 
         st.divider()
-        st.markdown("### 📊 데이터 확인 및 수정")
         
+        # [요청] 메시지를 타이틀 옆에 표시
+        col_title, col_msg = st.columns([4, 6])
+        with col_title:
+            st.markdown("### 📊 데이터 확인 및 수정")
+        with col_msg:
+            if st.session_state.save_message:
+                st.success(st.session_state.save_message)
+
         curr_p_order = [p['name'] for p in st.session_state.products if p['hotel'] == current_hotel]
         code_map = {p['name']: p.get('code', '') for p in st.session_state.products if p['hotel'] == current_hotel}
         
@@ -517,23 +573,16 @@ if current_hotel:
                 list_view_df = show_df.copy()
                 list_view_df['상품관리코드'] = list_view_df['상품명'].map(code_map)
                 
-                # [요청] 한국어 요일 포함 (YYYY-MM-DD (월))
+                # [요청] 한국어 요일 포함
                 list_view_df['날짜_표시'] = list_view_df['날짜'].apply(format_date_kr)
                 
-                # [요청] 요금 포맷은 NumberColumn format="%d"
+                # [요청] 요금 콤마 포맷 "%d" (data_editor 에러 방지)
                 cols = ['날짜_표시', '상품명', '상품관리코드', '요금', '재고', '판매상태']
-                
-                # 원본 날짜는 숨기고 표시용 날짜 사용 (수정 불가) (천의 자리 콤마 streamlit에 적용이 안됨)
-                # 리스트 뷰에서 날짜를 수정하는 것은 복잡하므로 일반적으로 막습니다.
                 
                 st.info("💡 팁: 아래 리스트에서 여러 칸을 자유롭게 수정한 뒤, 맨 아래 **[수정사항 한 번에 저장하기]** 버튼을 눌러주세요.")
                 
                 with st.form("list_edit_form"):
-                    # data_editor needs raw data to map back? 
-                    # If we change date column to string, we can't map back easily unless index matches.
-                    # We will use the index of main_df to save back.
-                    
-                    edited_display = st.data_editor(
+                    edited = st.data_editor(
                         list_view_df[cols],
                         column_config={
                             "날짜_표시": st.column_config.TextColumn("날짜", disabled=True),
@@ -541,30 +590,28 @@ if current_hotel:
                             "상품관리코드": st.column_config.TextColumn(disabled=True),
                             "요금": st.column_config.NumberColumn(format="%d"), 
                         },
-                        use_container_width=True, hide_index=False # Show index to ensure mapping
+                        use_container_width=True, hide_index=False 
                     )
                     submit_changes = st.form_submit_button("✅ 수정사항 한 번에 저장하기 (클릭)", type="primary")
                 
                 if submit_changes:
-                    # Map back changes using index
-                    # edited_display has the same index as list_view_df, which has same index as show_df (if not sorted differently)
-                    # We must ensure show_df index aligns with st.session_state.main_df index? 
-                    # show_df is a copy. We should use the index from show_df to update main_df.
+                    # [Fix] KeyError 해결을 위해 '요금','재고','판매상태'만 비교
+                    target_cols = ['요금', '재고', '판매상태']
                     
-                    changed_indices = edited_display.index
-                    
-                    # Update main_df with values from edited_display
-                    # Columns to update: 요금, 재고, 판매상태
-                    st.session_state.main_df.loc[changed_indices, '요금'] = edited_display['요금']
-                    st.session_state.main_df.loc[changed_indices, '재고'] = edited_display['재고']
-                    st.session_state.main_df.loc[changed_indices, '판매상태'] = edited_display['판매상태']
-                    
-                    save_hotel_data(current_hotel, st.session_state.main_df)
-                    st.success("✅ 모든 수정사항이 저장되었습니다!")
-                    time.sleep(1)
-                    st.rerun()
+                    if not edited[target_cols].equals(show_df[target_cols]):
+                        st.session_state.main_df.loc[edited.index, target_cols] = edited[target_cols]
+                        save_hotel_data(current_hotel, st.session_state.main_df)
+                        st.session_state.save_message = "✅ 모든 수정사항이 저장되었습니다!"
+                        time.sleep(0.1)
+                        st.rerun()
+                    else:
+                        st.session_state.save_message = "변경 사항이 없습니다."
+                        st.rerun()
 
         else:
+            # 탭/뷰 변경 시 메시지 초기화
+            st.session_state.save_message = ""
+            
             is_stk = "재고" in view
             c1, c2, c3, c4, c5 = st.columns([6, 1, 2, 1, 6])
             
@@ -612,18 +659,25 @@ if current_hotel:
                             is_stop = (r['판매상태'] == 'N')
                             is_soldout = (q == 0)
                             
-                            box_cls = "prod-item"
-                            if is_soldout: box_cls = "bg-soldout"
-                            elif is_stop: box_cls = "bg-stop"
+                            # [요청] 배경색 로직 수정 (글씨 크기 문제 해결)
+                            # is_soldout -> 'prod-item-soldout' (CSS에 폰트사이즈 정의됨)
+                            # is_stop -> 'prod-item' (기본폰트) + 'bg-stop' (배경색)
+                            
+                            if is_soldout: 
+                                final_cls = "prod-item-soldout"
+                            elif is_stop: 
+                                final_cls = "prod-item bg-stop"
+                            else: 
+                                final_cls = "prod-item"
                             
                             if is_stk:
                                 q_txt = f"{q}개" if q > 0 else "0 (품절)"
                                 stop_txt = "<span class='stop-sales'>[판매중지]</span>" if is_stop else ""
                                 cls = "stock-zero" if is_soldout else "stock-tag"
-                                cell += f"<div class='prod-item {box_cls}'>{nm}<br>{stop_txt}<span class='{cls}'>{q_txt}</span></div>"
+                                cell += f"<div class='{final_cls}'>{nm}<br>{stop_txt}<span class='{cls}'>{q_txt}</span></div>"
                             else:
                                 txt, cls = f"{r['요금']:,}", "price-tag"
-                                cell += f"<div class='prod-item {box_cls}'>{nm}<br><span class='{cls}'>{txt}</span></div>"
+                                cell += f"<div class='{final_cls}'>{nm}<br><span class='{cls}'>{txt}</span></div>"
                         html += f"<td>{cell}</td>"
                 html += "</tr>"
             html += "</tbody></table>"
@@ -641,13 +695,12 @@ if current_hotel:
             out_rows = []
             for _, r in show_df.iterrows():
                 # [요청] 엑셀 J열 매핑
-                # A(0) 날짜, B(1) 상품명, ... G(6) 요금, H, I(8) 재고, J(9) 상품코드 ... M(12) 판매상태
                 row = [""]*13
                 row[0] = format_date_kr(r['날짜'])
                 row[1] = r['상품명']
                 row[6] = r['요금']
                 row[8] = r['재고']
-                row[9] = code_map.get(r['상품명'], '') # J열에 상품코드
+                row[9] = code_map.get(r['상품명'], '') # J열
                 row[12] = r['판매상태']
                 out_rows.append(row)
             
