@@ -400,7 +400,7 @@ if current_hotel:
                         
                         # [요청] 기간 추가 버튼: 빨간색, 작게, 바로 아래 배치
                         st.markdown('<div class="period-add-btn">', unsafe_allow_html=True)
-                        if st.button("⬇️ 기간 추가 (필수) ⬇️", key="add_pd_btn"):
+                        if st.button("⬇️ㅤ기간 추가 (필수❗)   ⬇️", key="add_pd_btn"):
                             if len(dr)==2:
                                 sel_ds = []
                                 for i in range(7):
@@ -520,10 +520,10 @@ if current_hotel:
                 # [요청] 한국어 요일 포함 (YYYY-MM-DD (월))
                 list_view_df['날짜_표시'] = list_view_df['날짜'].apply(format_date_kr)
                 
-                # [요청] 요금 콤마 포맷은 NumberColumn format="%,d"
+                # [요청] 요금 포맷은 NumberColumn format="%d"
                 cols = ['날짜_표시', '상품명', '상품관리코드', '요금', '재고', '판매상태']
                 
-                # 원본 날짜는 숨기고 표시용 날짜 사용 (수정 불가)
+                # 원본 날짜는 숨기고 표시용 날짜 사용 (수정 불가) (천의 자리 콤마 streamlit에 적용이 안됨)
                 # 리스트 뷰에서 날짜를 수정하는 것은 복잡하므로 일반적으로 막습니다.
                 
                 st.info("💡 팁: 아래 리스트에서 여러 칸을 자유롭게 수정한 뒤, 맨 아래 **[수정사항 한 번에 저장하기]** 버튼을 눌러주세요.")
@@ -539,7 +539,7 @@ if current_hotel:
                             "날짜_표시": st.column_config.TextColumn("날짜", disabled=True),
                             "상품명": st.column_config.TextColumn(disabled=True),
                             "상품관리코드": st.column_config.TextColumn(disabled=True),
-                            "요금": st.column_config.NumberColumn(format="%,d"), # [요청] 콤마
+                            "요금": st.column_config.NumberColumn(format="%d"), 
                         },
                         use_container_width=True, hide_index=False # Show index to ensure mapping
                     )
